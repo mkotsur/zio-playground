@@ -7,4 +7,5 @@ lazy val root = (project in file("."))
     name := "zio-playground-2_13"
   )
 
-libraryDependencies += "dev.zio" %% "zio" % "2.0.9"
+libraryDependencies += "dev.zio" %% "zio"      % "2.0.13"
+libraryDependencies += "dev.zio" %% "zio-http" % "3.0.0-RC1"
