@@ -6,6 +6,7 @@ import zio.http.HttpError.{BadRequest, Unauthorized}
 import zio.{ZIO, ZIOAppDefault, ZLayer}
 object SecureApp extends ZIOAppDefault {
 
+  // 1********************************************************************* //
   /**
     * “Inside every large program is a small program struggling to get out.”
     * — Tony Hoare
@@ -20,6 +21,8 @@ object SecureApp extends ZIOAppDefault {
 
     */
 
+  // **********2*********************************************************** //
+
   /**
     * Agenda:
     * - Layers and Dependencies in ZIO
@@ -31,44 +34,29 @@ object SecureApp extends ZIOAppDefault {
     * - Applying this to Routes
     */
 
-  /**
-    *
-    * An approach that allows to separate authentication from business logic in
-    * developer-friendly and type safe manner.
-    *
-    * IT DOES:
-    *  ✅ separate authentication and authorisation
-    *  ✅ separate permission validation from business logic
-    *  ✅ allow modeling permissions as ADTs
-    *  ✅ allow granular permissions configuration
-    *  ✅ make impossible to add a route without proper authoriseDbReadWrite check
-    *  - work with ZIO-http
-    *  - work with Tapir
-    *
-    * IT DOES NOT:
-    *  - require boilerplate code
-    *  - trigger scalafix or compiler warnings
-    *  - require deep knowledge of ZIO or FP
-    *  - require a lot of rewrite to work with Scala 3
-    */
+  // ********************3************************************************* //
 
-  // Token authentication
+  // Token authentication – making sure the token is valid and the claims are to be trusted!
   case class ValidJwtToken(age: Int, country: String, sessionType: String)
 
+  // We can do it based on data from request,
+  // using existing JWT libraries, wrapped into a thin layer of ZIO.
   def authenticateToken( /*[r: Request]*/ ): ZIO[Any, BadRequest, ValidJwtToken] =
     ZIO.succeed(ValidJwtToken(22, "NL", "Mobile"))
 
   override def run: ZIO[Any, Any, Any] = {
 
-    val businessLogic1 = for {
+    // ******************************4*************************************** //
+
+    val unitOfBusinessLogic = for {
       _ <- ZIO.service[Greeter.type].flatMap(_.hello())
 //      repo     <- ZIO.service[Repositories.type]
 //      _        <- repo.insert
-      business <- ZIO.service[InternalService.type]
+//      business <- ZIO.service[InternalService.type]
 //      _        <- business.doSomething()
     } yield ()
 
-    // 1*********2*********3*********4*********5*********6*********7********* //
+    // **************************************************6******************* //
 
     /**
       * Let's write a rule that says how to validate the session.
@@ -86,7 +74,7 @@ object SecureApp extends ZIOAppDefault {
           ZLayer.succeed(UserSession.Valid)
         case _ => ZLayer.fail(Unauthorized("Go away"))
       }
-    // 1*********2*********3*********4*********5*********6*********7********* //
+    // ************************************************************7********* //
 
     // The "less boilerplate way",
     // describe the "happy flow" as a partial function.
@@ -95,14 +83,12 @@ object SecureApp extends ZIOAppDefault {
         zio.ZLayer.succeed(UserSession.Valid)
     })
 
-    // 1*********2*********3*********4*********5*********6*********7********* //
-
-    // Or call from a service
+    // ****************************************5***************************** //
 
     // Resolve dependencies and remove "R" (it changes to Any) in ZIO[R,E,A]
     // and allows to run the program!
     authenticateToken( /*request*/ ).flatMap { token =>
-      businessLogic1
+      unitOfBusinessLogic
         .provideSome(
           ZLayer.succeed(Greeter)
 //            ++ ZLayer.succeed(InternalService)

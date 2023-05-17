@@ -1,16 +1,21 @@
 package nl.absolutevalue.playground.authorization.service
 
-import nl.absolutevalue.playground.authorization.Token.{Db, InternalEmployee, UserSession}
-import nl.absolutevalue.playground.authorization.Token
-import Token.syntax._
-import zio.{&, RIO, ZIO}
+import zio.{RIO, ZIO}
 
 import scala.language.postfixOps
 
+// These functions need [[Repositories]] as dependency,
+// and we DO have to "protect" them.
 object InternalService {
 
-  def resetPassword(): RIO[ /*TwoFactorSession.type & */ Repositories.type, Unit] = ???
+  /**
+    * Only for users in the middle of 2FA
+    */
+  def resendCode(): RIO[ /*TwoFactorSession.type & */ Repositories.type, Unit] = ???
 
+  /**
+   * Only for logged-
+   */
   def updateData(): RIO[ /*ValidSession.type & */ Repositories.type, Unit] =
     ZIO.debug("** Doing some business: ... **") *>
       (for {
