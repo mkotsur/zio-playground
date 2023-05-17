@@ -1,7 +1,11 @@
-package nl.absolutevalue.playground.authorization.service
-import zio.{Scope, ZIO, ZIOAppArgs, ZIOAppDefault}
+package nl.absolutevalue.playground.authorization
+
+import zio.ZIOAppDefault
 import zio.http._
 
+/**
+  * TODO: finish this example...
+  */
 object SecureRoutedApp extends ZIOAppDefault {
 
   private val app = Http.collect[Request] {
