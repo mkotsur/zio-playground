@@ -6,6 +6,11 @@ import zio.http.HttpError.{BadRequest, Unauthorized}
 import zio.{ZIO, ZIOAppDefault, ZLayer}
 object SecureApp extends ZIOAppDefault {
 
+  /**
+    * “Inside every large program is a small program struggling to get out.”
+    * — Tony Hoare
+    */
+
   /** Typical problems:
      - Difficulty of making changes
         - Authentication mixed with business logic
@@ -16,15 +21,14 @@ object SecureApp extends ZIOAppDefault {
     */
 
   /**
-    * “Inside every large program is a small program struggling to get out.”
-    * — Tony Hoare
-    */
-
-  /**
     * Agenda:
     * - Layers and Dependencies in ZIO
-    *    -> Let's inject Greeter Service
-    * -
+    * - Adding dependencies to a program
+    * - "Security Layer", or SLayer
+    * - SLayer As A Function
+    * - SLayer As A Partial Function
+    * - Requiring multiple SLayers
+    * - Applying this to Routes
     */
 
   /**
@@ -68,22 +72,24 @@ object SecureApp extends ZIOAppDefault {
 
     /**
       * Let's write a rule that says how to validate the session.
-      * We can use this rule to "protect" other services too!
+      * This rule is reusable in other services too!
       */
     def validSessionCheck(
         token: ValidJwtToken
-    ): zio.Layer[
+    ): zio.ZLayer[
+      Any,          // It can also have access to other services via other layers!
       Unauthorized, // Layers can "fail" too in ZIO!
       UserSession.Valid.type
     ] =
       token match {
-        case ValidJwtToken(_, _, sessionType) if Seq("mobile", "web").contains(sessionType) =>
+        case ValidJwtToken(_, _, st) if Seq("mobile", "web").contains(st) =>
           ZLayer.succeed(UserSession.Valid)
         case _ => ZLayer.fail(Unauthorized("Go away"))
       }
     // 1*********2*********3*********4*********5*********6*********7********* //
 
-    // The "less boilerplate way"
+    // The "less boilerplate way",
+    // describe the "happy flow" as a partial function.
     val FancyValidSessionCheck = Sec[ValidJwtToken, UserSession.Valid.type]({
       case ValidJwtToken(_, _, st) if Seq("mobile", "web").contains(st) =>
         zio.ZLayer.succeed(UserSession.Valid)
@@ -98,11 +104,11 @@ object SecureApp extends ZIOAppDefault {
     authenticateToken( /*request*/ ).flatMap { token =>
       businessLogic1
         .provideSome(
-//          validSessionCheck(token)
-//            ++ FancyValidSessionCheck.layer(token)
-//            ++ ZLayer.succeed(Greeter)
-//            ++ ZLayer.succeed(Repositories)
+          ZLayer.succeed(Greeter)
 //            ++ ZLayer.succeed(InternalService)
+//            ++ validSessionCheck(token)
+//            ++ FancyValidSessionCheck.layer(token)
+//            ++ ZLayer.succeed(Repositories)
         )
     // In the "routes situation" we would concat more routes here...
     }
