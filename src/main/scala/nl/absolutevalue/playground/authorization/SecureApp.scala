@@ -1,9 +1,9 @@
 package nl.absolutevalue.playground.authorization
 
 import nl.absolutevalue.playground.authorization.Token.{InternalEmployee, UserSession}
-import nl.absolutevalue.playground.authorization.service.{Greeter, InternalService}
+import nl.absolutevalue.playground.authorization.service.{Greeter, InternalService, Repositories}
 import zio.http.HttpError.{BadRequest, Unauthorized}
-import zio.{ZIO, ZIOAppDefault, ZLayer}
+import zio.{&, ZIO, ZIOAppDefault, ZLayer}
 object SecureApp extends ZIOAppDefault {
 
   // 1********************************************************************* //
@@ -42,18 +42,16 @@ object SecureApp extends ZIOAppDefault {
   // We can do it based on data from request,
   // using existing JWT libraries, wrapped into a thin layer of ZIO.
   def authenticateToken( /*[r: Request]*/ ): ZIO[Any, BadRequest, ValidJwtToken] =
-    ZIO.succeed(ValidJwtToken(22, "NL", "Mobile"))
+    ZIO.succeed(ValidJwtToken(22, "NL", "mobile"))
 
   override def run: ZIO[Any, Any, Any] = {
 
     // ******************************4*************************************** //
 
     val unitOfBusinessLogic = for {
-      _ <- ZIO.service[Greeter.type].flatMap(_.hello())
-//      repo     <- ZIO.service[Repositories.type]
-//      _        <- repo.insert
-//      business <- ZIO.service[InternalService.type]
-//      _        <- business.doSomething()
+      _        <- ZIO.service[Greeter.type].flatMap(_.hello())
+      business <- ZIO.service[InternalService.type]
+      _        <- business.updateData()
     } yield ()
 
     // **************************************************6******************* //
@@ -62,7 +60,7 @@ object SecureApp extends ZIOAppDefault {
       * Let's write a rule that says how to validate the session.
       * This rule is reusable in other services too!
       */
-    def validSessionCheck(
+    def simpleValidSessionCheck(
         token: ValidJwtToken
     ): zio.ZLayer[
       Any,          // It can also have access to other services via other layers!
@@ -91,10 +89,10 @@ object SecureApp extends ZIOAppDefault {
       unitOfBusinessLogic
         .provideSome(
           ZLayer.succeed(Greeter)
-//            ++ ZLayer.succeed(InternalService)
-//            ++ validSessionCheck(token)
-//            ++ FancyValidSessionCheck.layer(token)
-//            ++ ZLayer.succeed(Repositories)
+            ++ ZLayer.succeed(InternalService)
+            ++ simpleValidSessionCheck(token)
+            ++ FancyValidSessionCheck.layer(token)
+            ++ ZLayer.succeed(Repositories)
         )
     // In the "routes situation" we would concat more routes here...
     }
